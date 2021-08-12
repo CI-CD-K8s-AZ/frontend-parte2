@@ -1,2 +1,91 @@
-kind: template
-load: angular.starlark
+kind: pipeline
+type: kubernetes
+name: default
+
+steps:
+- name: Build
+  image: node
+  commands:
+  - npm install -g @angular/cli@11.2.9
+  - npm install --force
+  - npm run build:${DRONE_SOURCE_BRANCH}  --configuration==${DRONE_SOURCE_BRANCH}
+  resources:
+    limits:
+      memory: 2GiB
+    requests:
+      memory: 2GiB
+  when:
+    event:
+    - push
+
+- name: Analysis
+  image: aosapps/drone-sonar-plugin
+  detach: true
+  settings:
+    sonar_host:
+      from_secret: sonar_host
+    sonar_token:
+      from_secret: sonar_token
+  failure: ignore
+  when:
+    event:
+    - push
+
+- name: Dockerize
+  image: plugins/docker
+  settings:
+    password:
+      from_secret: registry_password
+    registry: metalcloud.azurecr.io
+    repo: metalcloud.azurecr.io/${DRONE_REPO_NAME}
+    tags: ${DRONE_SOURCE_BRANCH}-v1.0-${DRONE_COMMIT_SHA:0:8}
+    username:
+      from_secret: registry_username
+  when:
+    event:
+    - push
+
+- name: Deploy
+  image: alpine/git
+  commands:
+  - "\n    git clone --branch ${DRONE_SOURCE_BRANCH} https://github.com/CI-CD-K8s-AZ/gitops-parte2.git\n    cd gitops-parte2\n    echo 'Actualizando ${DRONE_REPO_NAME} en ${DRONE_SOURCE_BRANCH}...'\n    app=${DRONE_REPO_NAME}\n    version=\"${DRONE_SOURCE_BRANCH}-v1.0-${DRONE_COMMIT_SHA:0:8}\"\n\n    if [ -d ./$app/ ]; then\n      echo \"Cambiando version para CD a: '$version' ...\"\n      _chart_=$(cat ./$app/Chart.yaml | awk '{gsub(/appVersion:.*/,\"appVersion: $version\")}1')\n      echo $_chart_ > ./$app/Chart.yaml\n\n      git add .\n      git commit -m \"Deploy: $app:$version by DroneCI ($DRONE_COMMIT_AUTHOR_NAME)\"\n      git push\n\n      echo Listo.\n    else \n      echo El proyecto no esta preparado para este ambiente\n      exit 13\n    fi\n  "
+  when:
+    branch:
+    - develop
+    - release
+    event:
+    - push
+
+trigger:
+  branch:
+  - master
+  - release
+  - develop
+  event:
+  - push
+
+---
+kind: pipeline
+type: kubernetes
+name: deploy
+
+steps:
+- name: Deploy
+  image: alpine/git
+  commands:
+  - "\n    git clone --branch ${DRONE_SOURCE_BRANCH} https://github.com/CI-CD-K8s-AZ/gitops-parte2.git\n    cd gitops-parte2\n    echo 'Actualizando ${DRONE_REPO_NAME} en ${DRONE_SOURCE_BRANCH}...'\n    app=${DRONE_REPO_NAME}\n    version=\"${DRONE_SOURCE_BRANCH}-v1.0-${DRONE_COMMIT_SHA:0:8}\"\n\n    if [ -d ./$app/ ]; then\n      echo \"Cambiando version para CD a: '$version' ...\"\n      _chart_=$(cat ./$app/Chart.yaml | awk '{gsub(/appVersion:.*/,\"appVersion: $version\")}1')\n      echo $_chart_ > ./$app/Chart.yaml\n\n      git add .\n      git commit -m \"Deploy: $app:$version by DroneCI ($DRONE_COMMIT_AUTHOR_NAME)\"\n      git push\n\n      echo Listo.\n    else \n      echo El proyecto no esta preparado para este ambiente\n      exit 13\n    fi\n  "
+  when:
+    branch:
+    - develop
+    - release
+    - master
+    event:
+    - promote
+
+trigger:
+  branch:
+  - master
+  - release
+  - develop
+  event:
+  - promote
