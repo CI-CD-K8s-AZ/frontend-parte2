@@ -48,7 +48,10 @@ steps:
 - name: Deploy
   image: alpine/git
   commands:
-  - "\n    git clone --branch ${DRONE_SOURCE_BRANCH} https://github.com/CI-CD-K8s-AZ/gitops-parte2.git\n    cd gitops-parte2\n    echo 'Actualizando ${DRONE_REPO_NAME} en ${DRONE_SOURCE_BRANCH}...'\n    app=${DRONE_REPO_NAME}\n    version=\"${DRONE_SOURCE_BRANCH}-v1.0-${DRONE_COMMIT_SHA:0:8}\"\n\n    if [ -d ./$app/ ]; then\n      echo \"Cambiando version para CD a: '$version' ...\"\n      _chart_=$(cat ./$app/Chart.yaml | awk '{gsub(/appVersion:.*/,\"appVersion: $version\")}1')\n      echo $_chart_ > ./$app/Chart.yaml\n\n      git add .\n      git commit -m \"Deploy: $app:$version by DroneCI ($DRONE_COMMIT_AUTHOR_NAME)\"\n      git push\n\n      echo Listo.\n    else \n      echo El proyecto no esta preparado para este ambiente\n      exit 13\n    fi\n  "
+    - "git clone --branch ${DRONE_SOURCE_BRANCH} https://github.com/CI-CD-K8s-AZ/gitops-parte2.git"
+    - "cd gitops-parte2"
+    - "echo 'Actualizando ${DRONE_REPO_NAME} en ${DRONE_SOURCE_BRANCH}...'"
+    - "sh ./update.sh '${DRONE_REPO_NAME}' '${DRONE_SOURCE_BRANCH}-v1.0-${DRONE_COMMIT_SHA:0:8}'"
   when:
     branch:
     - develop
@@ -73,7 +76,10 @@ steps:
 - name: Deploy
   image: alpine/git
   commands:
-  - "\n    git clone --branch ${DRONE_SOURCE_BRANCH} https://github.com/CI-CD-K8s-AZ/gitops-parte2.git\n    cd gitops-parte2\n    echo 'Actualizando ${DRONE_REPO_NAME} en ${DRONE_SOURCE_BRANCH}...'\n    app=${DRONE_REPO_NAME}\n    version=\"${DRONE_SOURCE_BRANCH}-v1.0-${DRONE_COMMIT_SHA:0:8}\"\n\n    if [ -d ./$app/ ]; then\n      echo \"Cambiando version para CD a: '$version' ...\"\n      _chart_=$(cat ./$app/Chart.yaml | awk '{gsub(/appVersion:.*/,\"appVersion: $version\")}1')\n      echo $_chart_ > ./$app/Chart.yaml\n\n      git add .\n      git commit -m \"Deploy: $app:$version by DroneCI ($DRONE_COMMIT_AUTHOR_NAME)\"\n      git push\n\n      echo Listo.\n    else \n      echo El proyecto no esta preparado para este ambiente\n      exit 13\n    fi\n  "
+    - "git clone --branch ${DRONE_SOURCE_BRANCH} https://github.com/CI-CD-K8s-AZ/gitops-parte2.git"
+    - "cd gitops-parte2"
+    - "echo 'Actualizando ${DRONE_REPO_NAME} en ${DRONE_SOURCE_BRANCH}...'"
+    - "sh ./update.sh '${DRONE_REPO_NAME}' '${DRONE_SOURCE_BRANCH}-v1.0-${DRONE_COMMIT_SHA:0:8}'"
   when:
     branch:
     - develop
